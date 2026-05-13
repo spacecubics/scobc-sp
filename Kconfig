@@ -1,0 +1,46 @@
+# Copyright (c) 2026 Space Cubics Inc.
+# SPDX-License-Identifier: Apache-2.0
+
+mainmenu "SC-OBC Safety Processor"
+
+menu "SC-OBC Safety Processor Configuration"
+
+menu "IPC(Inter-Processor Communication)"
+
+choice SC_IPC_SPI_MODE
+	prompt "SPI target mode"
+	default SC_IPC_SPI_MODE_1
+	help
+	  Select the SPI mode used by the SC-SPI-TARGET IP.
+
+config SC_IPC_SPI_MODE_1
+	bool "Mode 1 (CPOL=0, CPHA=1)"
+
+config SC_IPC_SPI_MODE_3
+	bool "Mode 3 (CPOL=1, CPHA=1)"
+
+endchoice
+
+module = SC_IPC
+module-str = SC IPC
+source "subsys/logging/Kconfig.template.log_config"
+
+endmenu
+
+menu "MPPC(Main Processor Power Controller)"
+
+module = SC_MPPC
+module-str = SC MPPC
+source "subsys/logging/Kconfig.template.log_config"
+
+endmenu
+
+endmenu
+
+menu "Out-of-tree Drivers"
+rsource "drivers/i2c/Kconfig"
+endmenu
+
+menu "Zephyr"
+source "Kconfig.zephyr"
+endmenu

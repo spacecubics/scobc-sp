@@ -1,0 +1,15 @@
+# Copyright (c) 2026 Space Cubics Inc.
+# SPDX-License-Identifier: Apache-2.0
+
+description: Space Cubics I2C Master controller
+
+compatible: "sc,i2c"
+
+include: [i2c-controller.yaml]
+
+properties:
+  reg:
+    required: true
+
+  interrupts:
+    required: true

@@ -1,0 +1,15 @@
+# Copyright (c) 2026 Space Cubics Inc.
+# SPDX-License-Identifier: Apache-2.0
+
+description: Space Cubics SC-SPI-TARGET register block
+
+compatible: "sc,spi-target"
+
+include: base.yaml
+
+properties:
+  reg:
+    required: true
+
+  interrupts:
+    required: true

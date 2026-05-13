@@ -1,0 +1,84 @@
+/*
+ * Copyright (c) 2026 Space Cubics Inc.
+ *
+ * SPDX-License-Identifier: Apache-2.0
+ */
+
+#include <zephyr/dt-bindings/i2c/i2c.h>
+
+/ {
+	soc {
+		system_register: system-register@80000000 {
+			compatible = "sc,system";
+			reg = <0x80000000 0x1000>;
+			status = "okay";
+		};
+
+		mppc: mppc@81001000 {
+			compatible = "sc,mppc";
+			interrupt-parent = <&plic>;
+			interrupts = <2 1>;
+			reg = <0x81001000 0x1000>;
+			status = "okay";
+		};
+
+		spi_target: spi-target@81000000 {
+			compatible = "sc,spi-target";
+			interrupt-parent = <&plic>;
+			interrupts = <16 1>;
+			reg = <0x81000000 0x1000>;
+			status = "okay";
+		};
+
+		i2c0: i2c@82000000 {
+			compatible = "sc,i2c";
+			interrupt-parent = <&plic>;
+			interrupts = <20 1>;
+			reg = <0x82000000 0x10000>;
+			#address-cells = <1>;
+			#size-cells = <0>;
+			clock-frequency = <I2C_BITRATE_STANDARD>;
+			status = "okay";
+
+			temp0: tmp175@4c {
+				compatible = "lm75";
+				reg = <0x4c>;
+				status = "okay";
+			};
+
+			temp1: tmp175@4d {
+				compatible = "lm75";
+				reg = <0x4d>;
+				status = "okay";
+			};
+
+			temp2: tmp175@4e {
+				compatible = "lm75";
+				reg = <0x4e>;
+				status = "okay";
+			};
+
+			cvmon0: ina3221@40 {
+				compatible = "ti,ina3221";
+				reg = <0x40>;
+
+				/* CH1: 5V0_SYS, CH2: 5V0_VER_PS, CH3: 5V0_VER_PL */
+				enable-channel = <1 1 1>;
+				shunt-resistors = <33 33 10>;
+
+				status = "okay";
+			};
+
+			cvmon1: ina3221@41 {
+				compatible = "ti,ina3221";
+				reg = <0x41>;
+
+				/* CH1: 3V3_EXT, CH2: 3V3_VER, CH3: unused */
+				enable-channel = <1 1 0>;
+				shunt-resistors = <33 33 33>;
+
+				status = "okay";
+			};
+		};
+	};
+};

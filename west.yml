@@ -1,0 +1,14 @@
+manifest:
+
+  remotes:
+    - name: sc
+      url-base: https://github.com/spacecubics
+
+  projects:
+    - name: zephyr
+      remote: sc
+      revision: v4.4-sc
+      west-commands: scripts/west-commands.yml
+
+  self:
+    path: scobc-sp
