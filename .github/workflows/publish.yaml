@@ -1,0 +1,137 @@
+name: Publish firmware
+
+on:
+  workflow_dispatch:
+    inputs:
+      ref:
+        description: Branch, tag, or commit hash to build
+        required: true
+        default: main
+        type: string
+
+  push:
+    tags:
+      - "*"
+
+permissions:
+  actions: read
+  contents: read
+
+concurrency:
+  group: >-
+    firmware-publish-${{ github.workflow }}-${{ github.event_name }}-${{ github.event_name == 'workflow_dispatch' && inputs.ref || github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  prepare-build:
+    runs-on: ubuntu-latest
+
+    outputs:
+      sha: ${{ steps.source.outputs.sha }}
+      short_sha: ${{ steps.source.outputs.short_sha }}
+
+    steps:
+      - name: Checkout requested source
+        uses: actions/checkout@v7
+        with:
+          ref: ${{ github.event_name == 'workflow_dispatch' && inputs.ref || github.ref }}
+          fetch-depth: 1
+
+      - name: Resolve source revision
+        id: source
+        shell: bash
+        run: |
+          set -eu
+
+          sha="$(git rev-parse HEAD)"
+
+          echo "sha=$sha" >> "$GITHUB_OUTPUT"
+          echo "short_sha=${sha:0:8}" >> "$GITHUB_OUTPUT"
+
+  build:
+    needs: prepare-build
+
+    name: Build @ ${{ needs.prepare-build.outputs.short_sha }}
+
+    runs-on: ubuntu-24.04
+
+    steps:
+      - name: Setup Python
+        uses: actions/setup-python@v6
+        with:
+          python-version: '3.13'
+
+      - name: Checkout
+        uses: actions/checkout@v7
+        with:
+          ref: ${{ needs.prepare-build.outputs.sha }}
+          fetch-depth: 1
+          path: scobc-sp
+
+      - name: Setup Zephyr
+        uses: zephyrproject-rtos/action-zephyr-setup@v1
+        with:
+          app-path: scobc-sp
+          toolchains: riscv64-zephyr-elf
+
+      - name: Build
+        run: west build -p always -b scobc_v1/miv scobc-sp
+
+      - name: Store firmware artifacts
+        uses: actions/upload-artifact@v7
+        with:
+          name: firmware-${{ needs.prepare-build.outputs.short_sha }}
+          path: |
+            build/zephyr/zephyr.bin
+            build/zephyr/zephyr.elf
+            build/zephyr/zephyr.hex
+          if-no-files-found: error
+          retention-days: 1
+          compression-level: 0
+
+  publish:
+    needs:
+      - prepare-build
+      - build
+
+    if: ${{ github.event.repository.fork == false }}
+
+    runs-on: ubuntu-latest
+
+    environment: publish
+
+    steps:
+      - name: Checkout workflow scripts
+        uses: actions/checkout@v7
+        with:
+          ref: ${{ github.workflow_sha }}
+          path: .workflow
+          sparse-checkout: .github/scripts
+          sparse-checkout-cone-mode: false
+
+      - name: Download firmware artifacts
+        uses: actions/download-artifact@v7
+        with:
+          name: firmware-${{ needs.prepare-build.outputs.short_sha }}
+          path: ${{ runner.temp }}/firmware-artifacts
+
+      - name: Create R2 upload commands
+        id: r2
+        shell: bash
+        env:
+          CLOUDFLARE_ACCOUNT_ID: ${{ vars.CLOUDFLARE_ACCOUNT_ID }}
+          EVENT_NAME: ${{ github.event_name }}
+          REF_NAME: ${{ github.ref_name }}
+          REF_TYPE: ${{ github.ref_type }}
+          REPOSITORY_NAME: ${{ github.event.repository.name }}
+          R2_BUCKET: ${{ vars.R2_BUCKET }}
+          R2_RELEASE_PREFIX: ${{ vars.R2_RELEASE_PREFIX || 'products/scobc-v1/releases' }}
+          SHA: ${{ needs.prepare-build.outputs.sha }}
+        run: bash "$GITHUB_WORKSPACE/.workflow/.github/scripts/create-r2-upload-commands.sh"
+
+      - name: Publish firmware artifacts
+        uses: cloudflare/wrangler-action@v4
+        with:
+          apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          accountId: ${{ vars.CLOUDFLARE_ACCOUNT_ID }}
+          command: ${{ steps.r2.outputs.commands }}
