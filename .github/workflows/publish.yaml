@@ -135,3 +135,40 @@ jobs:
           apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           accountId: ${{ vars.CLOUDFLARE_ACCOUNT_ID }}
           command: ${{ steps.r2.outputs.commands }}
+
+  notify:
+    needs: publish
+
+    if: ${{ github.event_name == 'push' && github.ref_type == 'tag' }}
+
+    runs-on: ubuntu-latest
+
+    environment: publish
+
+    steps:
+      - name: Generate GitHub App token
+        uses: actions/create-github-app-token@v3
+        id: app-token
+        with:
+          client-id: ${{ vars.APP_CLIENT_ID }}
+          private-key: ${{ secrets.APP_PRIVATE_KEY }}
+          owner: spacecubics
+          repositories: sc-obc-sp-fpga
+          permission-contents: write
+
+      - name: Dispatch artifact update
+        shell: bash
+        env:
+          GH_TOKEN: ${{ steps.app-token.outputs.token }}
+          RELEASE_TAG: ${{ github.ref_name }}
+          R2_RELEASE_PREFIX: ${{ vars.R2_RELEASE_PREFIX || 'products/scobc-v1/releases' }}
+        run: |
+          [[ "$RELEASE_TAG" =~ ^v[0-9]{4}\.[0-9]{2}$ ]]
+
+          artifact_path="${R2_RELEASE_PREFIX%/}/${RELEASE_TAG}/sp-firmware/"
+
+          gh api --method POST \
+            repos/spacecubics/sc-obc-sp-fpga/dispatches \
+            -f event_type=artifact-published \
+            -f "client_payload[tag]=$RELEASE_TAG" \
+            -f "client_payload[artifact_url]=https://downloads.spacecubics.com/${artifact_path}"
