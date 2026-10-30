@@ -77,6 +77,13 @@ jobs:
       - name: Build
         run: west build -p always -b scobc_v1/miv scobc-sp
 
+      - name: Generate Libero HEX
+        shell: bash
+        run: |
+          objcopy="$(sed -n 's/^CMAKE_OBJCOPY:FILEPATH=//p' build/CMakeCache.txt)"
+          "$objcopy" -O ihex --change-addresses=-0x60000000 \
+            build/zephyr/zephyr.elf build/zephyr/zephyr.libero.hex
+
       - name: Store firmware artifacts
         uses: actions/upload-artifact@v7
         with:
@@ -85,6 +92,7 @@ jobs:
             build/zephyr/zephyr.bin
             build/zephyr/zephyr.elf
             build/zephyr/zephyr.hex
+            build/zephyr/zephyr.libero.hex
           if-no-files-found: error
           retention-days: 1
           compression-level: 0

@@ -10,7 +10,7 @@ for name in CLOUDFLARE_ACCOUNT_ID R2_BUCKET; do
 done
 
 artifact_dir="${RUNNER_TEMP}/firmware-artifacts"
-artifact_names=(zephyr.bin zephyr.elf zephyr.hex)
+artifact_names=(zephyr.bin zephyr.elf zephyr.hex zephyr.libero.hex)
 artifacts=()
 
 for name in "${artifact_names[@]}"; do
