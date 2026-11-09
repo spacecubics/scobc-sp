@@ -343,7 +343,7 @@ static const struct i2c_driver_api i2c_sc_driver_api = {
 	static void i2c_sc_##n##_irq_init(const struct device *dev)	\
 	{								\
 		IRQ_CONNECT(DT_INST_IRQN(n),				\
-			    0,						\
+			    DT_INST_IRQ(n, priority),			\
 			    i2c_sc_isr,					\
 			    DEVICE_DT_INST_GET(n), 0);			\
 									\
